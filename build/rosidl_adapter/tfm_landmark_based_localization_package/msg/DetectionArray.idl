@@ -1,0 +1,15 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from tfm_landmark_based_localization_package/msg/DetectionArray.msg
+// generated code does not contain a copyright notice
+
+#include "tfm_landmark_based_localization_package/msg/Detection.idl"
+
+module tfm_landmark_based_localization_package {
+  module msg {
+    @verbatim (language="comment", text=
+      "An array of detections (each detection has its own header)")
+    struct DetectionArray {
+      sequence<tfm_landmark_based_localization_package::msg::Detection> detections;
+    };
+  };
+};

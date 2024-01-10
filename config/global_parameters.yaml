@@ -1,0 +1,7 @@
+fake_pole_detection_node:
+ ros__parameters:
+  radius_detection: 35
+  noise_error_sigma: 0.1
+main_node:
+ ros__parameters:
+  use_landmark_assignment_algorithm: False

@@ -1,0 +1,4 @@
+source;share/tfm_landmark_based_localization_package/local_setup.bash
+source;share/tfm_landmark_based_localization_package/local_setup.dsv
+source;share/tfm_landmark_based_localization_package/local_setup.sh
+source;share/tfm_landmark_based_localization_package/local_setup.zsh

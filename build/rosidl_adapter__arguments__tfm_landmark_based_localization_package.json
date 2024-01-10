@@ -1,0 +1,9 @@
+{
+  "package_name": "tfm_landmark_based_localization_package",
+  "non_idl_tuples": [
+    "/hdd/ros2_tfm_ws/src/tfm_landmark_based_localization_package:msg/Detection.msg",
+    "/hdd/ros2_tfm_ws/src/tfm_landmark_based_localization_package:msg/OrientedDetection.msg",
+    "/hdd/ros2_tfm_ws/src/tfm_landmark_based_localization_package:msg/DetectionArray.msg",
+    "/hdd/ros2_tfm_ws/src/tfm_landmark_based_localization_package:msg/OrientedDetectionArray.msg"
+  ]
+}
