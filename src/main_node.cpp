@@ -154,7 +154,8 @@ class MainNode : public rclcpp::Node
         cout << endl << "Graph Localitation Algorithm" << endl;
 
         // Start timer
-        auto ms_0 = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
+        //auto ms_0 = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
+        utils::tic();
 
         // Setup optimizer algorithm and solver
         g2o::SparseOptimizer optimizer;
@@ -217,8 +218,10 @@ class MainNode : public rclcpp::Node
                     << vehicle_pose->estimate().rotation().angle() << std::endl;
 
         // End timer
-        auto ms_1 = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
-        cout << "-----> Time spent in Graph Localitation Algorithm: " << ms_1-ms_0 << " ms" << endl << endl;
+        //auto ms_1 = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
+        //auto ms_1 = utils::tic()
+        //cout << "-----> Time spent in Graph Localitation Algorithm: " << ms_1-ms_0 << " ms" << endl << endl;
+        cout << "-----> Time spent in Graph Localitation Algorithm: " << utils::tic() << " micros" << endl << endl;
 
         cout << "-----------------" << endl << endl;
     }
