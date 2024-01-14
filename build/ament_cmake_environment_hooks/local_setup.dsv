@@ -1,4 +1,0 @@
-source;share/tfm_landmark_based_localization_package/environment/ament_prefix_path.sh
-source;share/tfm_landmark_based_localization_package/environment/library_path.sh
-source;share/tfm_landmark_based_localization_package/environment/path.sh
-source;share/tfm_landmark_based_localization_package/environment/pythonpath.sh

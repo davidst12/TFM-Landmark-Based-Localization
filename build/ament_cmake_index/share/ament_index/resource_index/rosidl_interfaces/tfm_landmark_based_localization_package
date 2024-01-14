@@ -1,8 +1,0 @@
-msg/Detection.idl
-msg/Detection.msg
-msg/DetectionArray.idl
-msg/DetectionArray.msg
-msg/OrientedDetection.idl
-msg/OrientedDetection.msg
-msg/OrientedDetectionArray.idl
-msg/OrientedDetectionArray.msg
