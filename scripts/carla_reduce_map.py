@@ -24,9 +24,9 @@ def main():
 
     f = open('../config/landmark_poses_town02.json')
     data = json.load(f)
-    array = []
+    landmarks_array = []
     for i in data['landmarks']:
-        array.append(i)
+        landmarks_array.append(i)
     f.close
 
     # Connect to carla server
@@ -65,19 +65,26 @@ def main():
     # # Toggle buildings off
     # world.enable_environment_objects(objects_to_toggle, False)
 
-    # Move spectator object
-    # spectator = world.get_spectator()
-    # transform = carla.Transform(carla.Location(x=c4x, z=0.0, y = 122.6))
-    # spectator.set_transform(transform)
-
     # object = world.get_blueprint_library().find("static.prop.bin")
     # world.try_spawn_actor(object, transform)
 
+    # Transform ROS coordinates to CARLA coordinates
+    for index in range(len(landmarks_array)):
+        y_coor = landmarks_array[index][1]
+        landmarks_array[index][1] = -y_coor
+
     # Spawn landmarks
     object = world.get_blueprint_library().find("static.prop.bin")
-    for index in range(len(array)):
-        world.try_spawn_actor(object, carla.Transform(carla.Location(x=array[index][0],z=0.0,y=array[index][1])))
+    for index in range(len(landmarks_array)):
+        world.try_spawn_actor(object, carla.Transform(carla.Location(x=landmarks_array[index][0],z=0.0,y=landmarks_array[index][1])))
 
+    # Move spectator object
+    spectator = world.get_spectator()
+    transform = carla.Transform(
+        location = carla.Location(x=104, z=235.0, y = 205), 
+        rotation = carla.Rotation(pitch = -90, yaw = -90, roll = 0)
+    )
+    spectator.set_transform(transform)
 
 if __name__ == '__main__':
 

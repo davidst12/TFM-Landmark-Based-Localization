@@ -29,7 +29,7 @@ void messageCallback(const nav_msgs::msg::Odometry::SharedPtr odometryMessage) {
   double poseX = odometryMessage->pose.pose.position.x;
   double poseY = odometryMessage->pose.pose.position.y;
   //cout << "Current car pose: ( " << poseX << "," << poseY << " )" << endl;
-  vehiclePose = g2o::SE2(poseX, poseY*(-1), 0.0);
+  vehiclePose = g2o::SE2(poseX, poseY, 0.0);
 }
 
 // Calculate measurement with noise
