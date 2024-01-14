@@ -1,8 +1,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "nav_msgs/msg/odometry.hpp"
-#include "tfm_landmark_based_localization_package/msg/detection.hpp"
-#include "tfm_landmark_based_localization_package/msg/detection_array.hpp"
+#include "detection_msgs/msg/detection.hpp"
+#include "detection_msgs/msg/detection_array.hpp"
 #include <chrono>
 #include <thread>   
 #include <vector>
@@ -14,7 +14,7 @@
 using namespace std;
 
 // Ros Publisher object (topic: /fake_pole_detection)
-rclcpp::Publisher<tfm_landmark_based_localization_package::msg::DetectionArray>::SharedPtr publisher;
+rclcpp::Publisher<detection_msgs::msg::DetectionArray>::SharedPtr publisher;
 
 g2o::SE2 vehiclePose = g2o::SE2(0.0, 0.0, 0.0);
 std::vector<utils::LandmarkObject> landmarkPoses;
@@ -57,9 +57,9 @@ bool compute_landmark_measurement(const g2o::SE2& pose, utils::LandmarkObject la
 }
 
 // Calculate fake detected landmarks
-tfm_landmark_based_localization_package::msg::DetectionArray getDetections(){
+detection_msgs::msg::DetectionArray getDetections(){
   cout << "Current car pose: ( " << vehiclePose[0] << " , " << vehiclePose[1] << " ) " << endl;
-  auto detectionsArray = tfm_landmark_based_localization_package::msg::DetectionArray();
+  auto detectionsArray = detection_msgs::msg::DetectionArray();
 
   for(unsigned int i = 0; i<landmarkPoses.size(); i++){
 
@@ -69,7 +69,7 @@ tfm_landmark_based_localization_package::msg::DetectionArray getDetections(){
 
     if (landmarkIsInRange){
 
-      auto detection = tfm_landmark_based_localization_package::msg::Detection();
+      auto detection = detection_msgs::msg::Detection();
       detection.id = landmarkPoses[i].getId();
       detection.position.x = measurement[0];
       detection.position.y = measurement[1];
@@ -90,7 +90,7 @@ int main(int argc, char * argv[])
   
   // Node + NodeObjects declaration
   auto fakePoleDetectionNode = std::make_shared<rclcpp::Node>("fake_pole_detection_node");
-  publisher = fakePoleDetectionNode->create_publisher<tfm_landmark_based_localization_package::msg::DetectionArray>("fake_pole_detection", 1);
+  publisher = fakePoleDetectionNode->create_publisher<detection_msgs::msg::DetectionArray>("fake_pole_detection", 1);
   auto subscription = fakePoleDetectionNode->create_subscription<nav_msgs::msg::Odometry>("/carla/ego_vehicle/odometry", 1, messageCallback);
   
   // Globar parameters -> 1º declare, 2º get them

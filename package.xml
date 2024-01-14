@@ -16,6 +16,7 @@
   <depend>nav_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>g2o</depend>
+  <depend>detection_msgs</depend>
 
   <exec_depend>rosidl_default_runtime</exec_depend>
   <exec_depend>carla_msgs</exec_depend>

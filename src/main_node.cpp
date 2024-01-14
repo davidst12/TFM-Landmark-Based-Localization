@@ -11,8 +11,8 @@
 #include <ament_index_cpp/get_package_prefix.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include "utils/utils.cpp"
-#include "tfm_landmark_based_localization_package/msg/detection_array.hpp"
-#include "tfm_landmark_based_localization_package/msg/detection.hpp"
+#include "detection_msgs/msg/detection_array.hpp"
+#include "detection_msgs/msg/detection.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -46,14 +46,14 @@ class MainNode : public rclcpp::Node
     // Constructor
     MainNode(): Node("main_node", rclcpp::NodeOptions())
     {
-        subscription_ = this->create_subscription<tfm_landmark_based_localization_package::msg::DetectionArray>("/fake_pole_detection", 1, std::bind(&MainNode::detectionsCallback, this, _1));
+        subscription_ = this->create_subscription<detection_msgs::msg::DetectionArray>("/fake_pole_detection", 1, std::bind(&MainNode::detectionsCallback, this, _1));
 
         landmarkPoses = utils::getLandmarkPoses();
 
         // Global parameters
         declare_parameter("use_landmark_assignment_algorithm", false);
         global_use_landmark_assignment_algorithm = get_parameter("use_landmark_assignment_algorithm").as_bool();
-        cout << "Clobal parameters" << endl;
+        cout << "Global parameters" << endl;
         cout << " - Use_landmark_assignment_algorithm -> " << global_use_landmark_assignment_algorithm << endl;
     }
 
@@ -70,16 +70,16 @@ class MainNode : public rclcpp::Node
 
     private:
 
-    rclcpp::Subscription<tfm_landmark_based_localization_package::msg::DetectionArray>::SharedPtr subscription_;
+    rclcpp::Subscription<detection_msgs::msg::DetectionArray>::SharedPtr subscription_;
 
     std::vector<utils::LandmarkObject> landmarkPoses;
-    std::vector<tfm_landmark_based_localization_package::msg::Detection> detections;
+    std::vector<detection_msgs::msg::Detection> detections;
 
     g2o::SE2 vehiclePose;
     bool global_use_landmark_assignment_algorithm;
 
     // Callback of "/fake_pole_detection" topic
-    void detectionsCallback(const tfm_landmark_based_localization_package::msg::DetectionArray & detectionsList) {
+    void detectionsCallback(const detection_msgs::msg::DetectionArray & detectionsList) {
         cout << " - Detections received: " << detectionsList.detections.size() << endl;
 
         detections.clear();
@@ -92,7 +92,7 @@ class MainNode : public rclcpp::Node
     }
 
     // Distance: car -> landmark_detected
-    double calculateDistance(Eigen::Vector2d landmarkPose, g2o::SE2 poseCar, tfm_landmark_based_localization_package::msg::Detection measure){
+    double calculateDistance(Eigen::Vector2d landmarkPose, g2o::SE2 poseCar, detection_msgs::msg::Detection measure){
 
         double l1 = pow(landmarkPose[0]-(poseCar[0]+measure.position.x), 2);
         double l2 = pow(landmarkPose[1]-(poseCar[1]+measure.position.y), 2);
@@ -106,7 +106,7 @@ class MainNode : public rclcpp::Node
         cout << "Landmark - Measure association algorithm (Hungarian Method)" << endl;
 
         // Start timer
-        auto ms0 = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
+        utils::tic();
 
         // Fill Cost Matrix
         vector< vector<double> > costMatrix(landmarkPoses.size(), vector<double>(detections.size(), 0.0));
@@ -136,8 +136,7 @@ class MainNode : public rclcpp::Node
         std::cout << " - Cost: " << cost << std::endl;
 
         // End timer
-        auto ms1 = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
-        cout << "-----> Time spent in Association Algorithm: " << ms1-ms0 << " ms" << endl;
+        cout << "-----> Time spent in Association Algorithm: " << utils::tic() << " micros" << endl;
 
         return finalAssignment;
     }
@@ -154,7 +153,6 @@ class MainNode : public rclcpp::Node
         cout << endl << "Graph Localitation Algorithm" << endl;
 
         // Start timer
-        //auto ms_0 = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
         utils::tic();
 
         // Setup optimizer algorithm and solver
@@ -218,9 +216,6 @@ class MainNode : public rclcpp::Node
                     << vehicle_pose->estimate().rotation().angle() << std::endl;
 
         // End timer
-        //auto ms_1 = duration_cast< milliseconds >(system_clock::now().time_since_epoch()).count();
-        //auto ms_1 = utils::tic()
-        //cout << "-----> Time spent in Graph Localitation Algorithm: " << ms_1-ms_0 << " ms" << endl << endl;
         cout << "-----> Time spent in Graph Localitation Algorithm: " << utils::tic() << " micros" << endl << endl;
 
         cout << "-----------------" << endl << endl;

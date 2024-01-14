@@ -22,23 +22,7 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(g2o REQUIRED)
-
-
-set(msg_files
-  "msg/Detection.msg"
-  "msg/OrientedDetection.msg"
-  "msg/DetectionArray.msg"
-  "msg/OrientedDetectionArray.msg"
-)
-
-rosidl_generate_interfaces(${PROJECT_NAME}
-  ${msg_files}
-  DEPENDENCIES
-    std_msgs
-    geometry_msgs
-  ADD_LINTER_TESTS
-)
-rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
+find_package(detection_msgs REQUIRED)
 
 add_subdirectory(libs/json)
 
@@ -51,11 +35,12 @@ add_library(my_commons SHARED
 set(SOURCES
   src/association_algorithm/Hungarian.cpp
 )
+
 ament_target_dependencies(my_commons rclcpp std_msgs geometry_msgs)
 target_link_libraries(my_commons Eigen3::Eigen nlohmann_json)
 
 add_executable(main_node src/main_node.cpp ${SOURCES})
-ament_target_dependencies(main_node rclcpp std_msgs geometry_msgs)
+ament_target_dependencies(main_node rclcpp std_msgs geometry_msgs detection_msgs)
 target_link_libraries(main_node 
   my_commons 
   Eigen3::Eigen 
@@ -65,12 +50,11 @@ target_link_libraries(main_node
   g2o::types_slam2d
   g2o::solver_dense
   g2o::solver_cholmod
-  g2o::solver_eigen
-  "${cpp_typesupport_target}")
+  g2o::solver_eigen)
 
 add_executable(fake_pole_detection_node src/fake_pole_detection_node.cpp)
-ament_target_dependencies(fake_pole_detection_node rclcpp std_msgs nav_msgs)
-target_link_libraries(fake_pole_detection_node g2o::core g2o::types_sba Eigen3::Eigen nlohmann_json "${cpp_typesupport_target}")
+ament_target_dependencies(fake_pole_detection_node rclcpp std_msgs nav_msgs detection_msgs)
+target_link_libraries(fake_pole_detection_node g2o::core g2o::types_sba Eigen3::Eigen nlohmann_json)
 
 # Node of g2o example
 # G2O BA demo
@@ -122,11 +106,7 @@ install(TARGETS
   g2o_test
   DESTINATION lib/${PROJECT_NAME}
 )
-# Install include directories
-install(
-  DIRECTORY include/
-  DESTINATION src/g2o_examples
-)
+# Install directories
 install(
   DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}/

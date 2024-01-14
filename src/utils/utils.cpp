@@ -54,13 +54,13 @@ namespace utils{
     }
 
     double tic()
-{
-    static std::chrono::time_point<std::chrono::steady_clock> last_tic__;
-    auto new_tic = std::chrono::steady_clock::now();
-    double micros = std::chrono::duration<double, std::micro>(new_tic - last_tic__).count();
-    last_tic__ = new_tic;
-    return micros;
-}
+    {
+        static std::chrono::time_point<std::chrono::steady_clock> last_tic__;
+        auto new_tic = std::chrono::steady_clock::now();
+        double micros = std::chrono::duration<double, std::micro>(new_tic - last_tic__).count();
+        last_tic__ = new_tic;
+        return micros;
+    }
 
 }
 
