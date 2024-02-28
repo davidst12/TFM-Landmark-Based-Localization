@@ -11,8 +11,11 @@
 #include <ament_index_cpp/get_package_prefix.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include "utils/utils.cpp"
+#include "utils/errors.cpp"
 #include "detection_msgs/msg/detection_array.hpp"
 #include "detection_msgs/msg/detection.hpp"
+#include "tfm_landmark_based_localization_package/msg/results.hpp"
+#include "sensor_msgs/msg/nav_sat_fix.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -47,14 +50,22 @@ class MainNode : public rclcpp::Node
     MainNode(): Node("main_node", rclcpp::NodeOptions())
     {
         subscription_ = this->create_subscription<detection_msgs::msg::DetectionArray>("/fake_pole_detection", 1, std::bind(&MainNode::detectionsCallback, this, _1));
+        subscription2_ = this->create_subscription<sensor_msgs::msg::NavSatFix>("/carla/ego_vehicle/gnss", 1, std::bind(&MainNode::gnssCallback, this, _1));
+        publisher = this->create_publisher<tfm_landmark_based_localization_package::msg::Results>("/results", 1);
+
 
         landmarkPoses = utils::getLandmarkPoses();
 
         // Global parameters
         declare_parameter("use_landmark_assignment_algorithm", false);
+        declare_parameter("gps_noise_error_sigma", 0.0);
         global_use_landmark_assignment_algorithm = get_parameter("use_landmark_assignment_algorithm").as_bool();
+        global_gps_noise_error_sigma = get_parameter("gps_noise_error_sigma").as_double();
         cout << "Global parameters" << endl;
         cout << " - Use_landmark_assignment_algorithm -> " << global_use_landmark_assignment_algorithm << endl;
+        cout << " - Gps_noise_error_sigma -> " << global_gps_noise_error_sigma << endl;
+
+        recoveryCounter = 0;
     }
 
     // Wait for initial pose from user
@@ -71,24 +82,57 @@ class MainNode : public rclcpp::Node
     private:
 
     rclcpp::Subscription<detection_msgs::msg::DetectionArray>::SharedPtr subscription_;
+    rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr subscription2_;
+    rclcpp::Publisher<tfm_landmark_based_localization_package::msg::Results>::SharedPtr publisher;
 
     std::vector<utils::LandmarkObject> landmarkPoses;
     std::vector<detection_msgs::msg::Detection> detections;
 
     g2o::SE2 vehiclePose;
+    g2o::SE2 gnssVehiclePose;
     bool global_use_landmark_assignment_algorithm;
+    double global_gps_noise_error_sigma;
+
+    tfm_landmark_based_localization_package::msg::Results results;
+    int recoveryCounter;
+
+
+    void cleanResults(){
+        results.car_position_estimation = geometry_msgs::msg::Pose();
+        results.detections_assignment = vector<int>();
+        results.time_spent = vector<double>();
+        results.cost = 0.0;
+    }
 
     // Callback of "/fake_pole_detection" topic
     void detectionsCallback(const detection_msgs::msg::DetectionArray & detectionsList) {
         cout << " - Detections received: " << detectionsList.detections.size() << endl;
 
         detections.clear();
+        cleanResults();
 
         for (unsigned int i = 0; i<detectionsList.detections.size(); i++){
             detections.push_back(detectionsList.detections[i]);
         }
 
+        results.header = detectionsList.header;
+
         estimateLocalitation();
+    }
+
+    // Callback of "/carla/ego_vehicle/gnss" topic
+    void gnssCallback(const sensor_msgs::msg::NavSatFix & gnssValue) {
+        
+        if(recoveryCounter > 1){
+            double lat = gnssValue.latitude;
+            double lon = gnssValue.longitude;
+
+            double y = 6371000 * tan(lat*3.1415/180) + errors::gaussian(global_gps_noise_error_sigma); // 1 o 2 metros
+            double x = 6371000 * tan(lon*3.1415/180) + errors::gaussian(global_gps_noise_error_sigma);
+
+            gnssVehiclePose = g2o::SE2(x, y, 0.0);
+            //cout << "x: " << x << " , y: " << y << endl;
+        }
     }
 
     // Distance: car -> landmark_detected
@@ -135,14 +179,33 @@ class MainNode : public rclcpp::Node
         }
         std::cout << " - Cost: " << cost << std::endl;
 
+        if(cost > 50){
+            recoveryCounter++;
+        }else{
+            recoveryCounter = 0;
+        }
+
         // End timer
-        cout << "-----> Time spent in Association Algorithm: " << utils::tic() << " micros" << endl;
+        double timeSpent = utils::tic();
+        cout << "-----> Time spent in Association Algorithm: " << timeSpent << " micros" << endl;
+
+        results.detections_assignment = finalAssignment;
+        results.cost = cost;
+        results.time_spent.push_back(timeSpent);
 
         return finalAssignment;
     }
 
     // Location based in graph algorithm
     void estimateLocalitation(){
+
+        // If recovery is true -> vehiclePose lo cojo del GNSS
+        results.recovery_applied = false;
+        if(recoveryCounter == 3){
+            recoveryCounter = 0;
+            vehiclePose = gnssVehiclePose;
+            results.recovery_applied = true;
+        }
 
         vector<int> landmarkAssignment;
         if(global_use_landmark_assignment_algorithm){
@@ -184,6 +247,8 @@ class MainNode : public rclcpp::Node
         vehicle_pose_vertex->setEstimate(vehiclePose);
         optimizer.addVertex(vehicle_pose_vertex);
 
+        // cout << "vehicle pose = " << vehiclePose[0] << " , " << vehiclePose[1] << endl;
+
         // Set detections (graph edges)
         for (size_t i = 0; i < detections.size(); i++)
         {
@@ -198,7 +263,8 @@ class MainNode : public rclcpp::Node
             }
 
             //Eigen::Vector2d measurement;
-            Eigen::Matrix2d inf_matrix = Eigen::Matrix2d::Identity() * 10;
+            //Eigen::Matrix2d inf_matrix = Eigen::Matrix2d::Identity() * detections[i].covariance[0];
+            Eigen::Matrix2d inf_matrix = utils::covarianceArrayX9toMatrix2d(detections[i].covariance).inverse();
 
             landmark_observation->setMeasurement(g2o::Vector2(detections[i].position.x, detections[i].position.y));
             landmark_observation->setInformation(inf_matrix);
@@ -216,9 +282,18 @@ class MainNode : public rclcpp::Node
                     << vehicle_pose->estimate().rotation().angle() << std::endl;
 
         // End timer
-        cout << "-----> Time spent in Graph Localitation Algorithm: " << utils::tic() << " micros" << endl << endl;
+        double timeSpent = utils::tic();
+        cout << "-----> Time spent in Graph Localitation Algorithm: " << timeSpent << " micros" << endl << endl;
+
+        vehiclePose = vehicle_pose->estimate();
+        //cout << "Pose estimation check: " << vehiclePose.toVector() << endl;
+
+        results.time_spent.push_back(timeSpent);
+        results.car_position_estimation.position = geometry_msgs::build<geometry_msgs::msg::Point>().x(vehiclePose[0]).y(vehiclePose[1]).z(0.0);
+        publisher->publish(results);
 
         cout << "-----------------" << endl << endl;
+
     }
 };
 
@@ -227,11 +302,8 @@ int main(int argc, char * argv[])
     rclcpp::init(argc, argv);
     auto mainNode = std::make_shared<MainNode>();
 
-    while (rclcpp::ok())
-    {
-        mainNode->waitForInitialPose();
-        rclcpp::spin_some(mainNode);
-    }
+    mainNode->waitForInitialPose();
+    rclcpp::spin(mainNode);
     
     rclcpp::spin(std::make_shared<MainNode>());
     rclcpp::shutdown();

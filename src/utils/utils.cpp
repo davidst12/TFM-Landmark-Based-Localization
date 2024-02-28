@@ -62,5 +62,33 @@ namespace utils{
         return micros;
     }
 
+    static Eigen::Matrix2d covarianceArrayX9toMatrix2d(std::array<double, 9UL> covarianceArray){
+        Eigen::Matrix2d aux; //(row colum)
+        aux(0, 0) = covarianceArray[0];
+        aux(0, 1) = covarianceArray[1];
+        aux(1, 0) = covarianceArray[3];
+        aux(1, 1) = covarianceArray[4];
+        //std::cout << "Matrix: "<< aux << std::endl;
+        return aux;
+    }
+
+    static Eigen::Matrix3d covarianceArrayX9toMatrix3d(std::array<double, 9UL> covarianceArray){
+        Eigen::Matrix3d aux; //(row colum)
+        int i = 0;
+        for (int row = 0; row < 3; ++row)
+        {
+            for (int col = 0; col < 3; ++col)
+            {
+                aux(row, col) = covarianceArray[i];
+                i ++;
+            }
+        }
+        return aux;
+    }
+
+    static std::array<double, 9UL> matrix2dToCovarianceArrayX9(Eigen::Matrix2d covarianceMatrix){
+        return { covarianceMatrix(0,0), covarianceMatrix(0,1), 0, covarianceMatrix(1, 0), covarianceMatrix(1,1), 0, 0, 0, 0 };
+    }
+
 }
 

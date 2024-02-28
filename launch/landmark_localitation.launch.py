@@ -26,4 +26,11 @@ def generate_launch_description():
             output='screen',
             prefix=["gnome-terminal --title='Main Node' -- "]
         ),
+        Node(
+            package='tfm_landmark_based_localization_package',
+            executable='results_node',
+            name='results_node',
+            output='screen',
+            prefix=["gnome-terminal --title='Results Node' -- "]
+        ),
    ])
