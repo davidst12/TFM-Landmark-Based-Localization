@@ -5,30 +5,33 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
-# find_package(<dependency> REQUIRED)
-find_package(ament_cmake REQUIRED)
+### Project dependences
 
-# **Añadir dependencias/librerias 2/2**
+find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(std_msgs REQUIRED)
 find_package(message_filters REQUIRED)
+
+find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(carla_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(rosidl_default_generators REQUIRED) # To create our own msgs
-#Dependences for g2o examples
+find_package(detection_msgs REQUIRED)
+
+# Dependences for own messages
+find_package(rosidl_default_generators REQUIRED)
+
+# Dependences for g2o examples
 find_package(visualization_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(g2o REQUIRED)
-find_package(detection_msgs REQUIRED)
 
 add_subdirectory(libs/json)
 
-# Messages
+### Define own messages
+
 set(msg_files
   "msg/Results.msg"
 )
@@ -41,43 +44,37 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 )
 rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
 
-# **Añadir clases/objetos que no son nodos**
+### Define utils/commons files
+
 add_library(my_commons SHARED 
   src/utils/utils.cpp
   src/utils/errors.cpp
 )
 
-set(SOURCES
-  src/association_algorithm/Hungarian.cpp
-)
-
 ament_target_dependencies(my_commons rclcpp std_msgs geometry_msgs)
 target_link_libraries(my_commons Eigen3::Eigen nlohmann_json)
 
-add_executable(main_node src/main_node.cpp ${SOURCES})
-ament_target_dependencies(main_node rclcpp std_msgs geometry_msgs detection_msgs sensor_msgs)
-target_link_libraries(main_node 
-  my_commons 
-  Eigen3::Eigen 
-  nlohmann_json 
-  g2o::core
-  g2o::types_sba
-  g2o::types_slam2d
-  g2o::solver_dense
-  g2o::solver_cholmod
-  g2o::solver_eigen
-  "${cpp_typesupport_target}")
+### Declare executables
 
+# main_node declaration
+add_executable(main_node src/main_node.cpp src/association_algorithm/Hungarian.cpp)
+ament_target_dependencies(main_node rclcpp std_msgs geometry_msgs detection_msgs sensor_msgs)
+target_link_libraries(main_node my_commons nlohmann_json "${cpp_typesupport_target}"
+	Eigen3::Eigen g2o::core 
+	g2o::types_sba g2o::types_slam2d 
+	g2o::solver_dense g2o::solver_cholmod g2o::solver_eigen)
+
+# fake_pole_detection_node declaration
 add_executable(fake_pole_detection_node src/fake_pole_detection_node.cpp)
 ament_target_dependencies(fake_pole_detection_node rclcpp std_msgs nav_msgs detection_msgs)
 target_link_libraries(fake_pole_detection_node g2o::core g2o::types_sba Eigen3::Eigen nlohmann_json)
 
+# results_node declaration
 add_executable(results_node src/results_node.cpp)
 ament_target_dependencies(results_node rclcpp std_msgs nav_msgs detection_msgs message_filters)
 target_link_libraries(results_node "${cpp_typesupport_target}")
 
-# Node of g2o example
-# G2O BA demo
+### g2o examples declaration
 add_executable(g2o_ba_demo
   src/g2o_examples/g2o_ba_demo.cpp
 )
@@ -118,7 +115,8 @@ target_link_libraries(g2o_test
   g2o::solver_cholmod
   g2o::solver_eigen
 )
-# **Añadir nombre de los nodos a TARGETS**
+
+### Declare all targets
 install(TARGETS 
   main_node
   fake_pole_detection_node
@@ -127,13 +125,14 @@ install(TARGETS
   g2o_test
   DESTINATION lib/${PROJECT_NAME}
 )
-# Install directories
+
+### Install directories
 install(
   DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}/
 )
-install(DIRECTORY
-  config
+install(
+  DIRECTORY config
   DESTINATION share/${PROJECT_NAME}
 )
 
