@@ -37,12 +37,11 @@ namespace utils
     /*
      * Get landmarks from config file
      */
-    std::vector<LandmarkObject> get_landmark_poses()
+    std::vector<LandmarkObject> get_landmark_poses(std::string package_prefix, std::string landmarks_ground_truth_file)
     {
 
-        std::string package_path = ament_index_cpp::get_package_prefix("tfm_landmark_based_localization_package");
-        std::ifstream f(package_path +
-                        "/../../src/tfm_landmark_based_localization_package/config/landmark_poses_town02.json");
+        std::string package_path = ament_index_cpp::get_package_prefix(package_prefix);
+        std::ifstream f(package_path + landmarks_ground_truth_file);
 
         json data = json::parse(f);
         std::vector<std::vector<int>> l = data["landmarks"];

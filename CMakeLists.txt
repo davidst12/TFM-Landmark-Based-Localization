@@ -56,10 +56,10 @@ target_link_libraries(my_commons Eigen3::Eigen nlohmann_json)
 
 ### Declare executables
 
-# main_node declaration
-add_executable(main_node src/main_node.cpp src/association_algorithm/Hungarian.cpp)
-ament_target_dependencies(main_node rclcpp std_msgs geometry_msgs detection_msgs sensor_msgs)
-target_link_libraries(main_node my_commons nlohmann_json "${cpp_typesupport_target}"
+# landmarks_graph_location_node declaration
+add_executable(landmarks_graph_location_node src/landmarks_graph_location_node.cpp src/association_algorithm/Hungarian.cpp)
+ament_target_dependencies(landmarks_graph_location_node rclcpp std_msgs geometry_msgs detection_msgs sensor_msgs)
+target_link_libraries(landmarks_graph_location_node my_commons nlohmann_json "${cpp_typesupport_target}"
 	Eigen3::Eigen g2o::core 
 	g2o::types_sba g2o::types_slam2d 
 	g2o::solver_dense g2o::solver_cholmod g2o::solver_eigen)
@@ -69,10 +69,10 @@ add_executable(fake_pole_detection_node src/fake_pole_detection_node.cpp)
 ament_target_dependencies(fake_pole_detection_node rclcpp std_msgs nav_msgs detection_msgs)
 target_link_libraries(fake_pole_detection_node g2o::core g2o::types_sba Eigen3::Eigen nlohmann_json)
 
-# results_node declaration
-add_executable(results_node src/results_node.cpp)
-ament_target_dependencies(results_node rclcpp std_msgs nav_msgs detection_msgs message_filters)
-target_link_libraries(results_node "${cpp_typesupport_target}")
+# location_statistics_node declaration
+add_executable(location_statistics_node src/location_statistics_node.cpp)
+ament_target_dependencies(location_statistics_node rclcpp std_msgs nav_msgs detection_msgs message_filters)
+target_link_libraries(location_statistics_node "${cpp_typesupport_target}")
 
 ### g2o examples declaration
 add_executable(g2o_ba_demo
@@ -118,9 +118,9 @@ target_link_libraries(g2o_test
 
 ### Declare all targets
 install(TARGETS 
-  main_node
+  landmarks_graph_location_node
   fake_pole_detection_node
-  results_node
+  location_statistics_node
   g2o_ba_demo
   g2o_test
   DESTINATION lib/${PROJECT_NAME}

@@ -3,6 +3,9 @@
 #include <chrono>
 #include <thread>
 #include <vector>
+#include <iostream>
+#include <fstream>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include "std_msgs/msg/string.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -30,6 +33,8 @@ double average_error = 0.0;
 
 int iteration = 0;
 int recoveries_count = 0;
+
+ofstream file;
 
 /*
  * Global funtions
@@ -99,12 +104,85 @@ void print_results()
 	cout << endl;
 }
 
+void print_results_in_file()
+{
+	std::string landmarks_detected = std::to_string(localitation_result.detections_assignment[0]);
+	for (unsigned int i = 1; i < localitation_result.detections_assignment.size(); i++)
+	{
+		landmarks_detected += "-" + std::to_string(localitation_result.detections_assignment[i]);
+	}
+
+	std::string real_landmarks = detection_list.detections[0].id;
+	for (unsigned int i = 1; i < detection_list.detections.size(); i++)
+	{
+		real_landmarks += "-" + detection_list.detections[i].id;
+	}
+
+	std::string location_estimated = "(" + to_string(localitation_result.car_position_estimation.position.x) + " | " + to_string(localitation_result.car_position_estimation.position.y) + ")";
+
+	std::string real_location = "(" + to_string(real_car_pose.position.x) + " | " + to_string(real_car_pose.position.y) + ")";
+
+	file << iteration
+		 << ","
+		 << localitation_result.detections_assignment.size()
+		 << ","
+		 << landmarks_detected
+		 << ","
+		 << real_landmarks
+		 << ","
+		 << localitation_result.time_spent[0]
+		 << ","
+		 << localitation_result.time_spent[1]
+		 << ","
+		 << localitation_result.cost
+		 << ","
+		 << localitation_result.recovery_applied
+		 << ","
+		 << location_estimated
+		 << ","
+		 << real_location
+		 << ","
+		 << current_error
+		 << ","
+		 << "0.0"
+		 << endl;
+}
+
 void run_result_print_process()
 {
 	calculate_error_in_cm();
 	calculate_maximun_error();
 	calculate_average_error();
 	print_results();
+	print_results_in_file();
+}
+
+void print_header()
+{
+	file << "Iteration"
+		 << ","
+		 << "Nº Landmarks"
+		 << ","
+		 << "Landmarks detected"
+		 << ","
+		 << "Real Landmarks"
+		 << ","
+		 << "Association time"
+		 << ","
+		 << "Localitation time"
+		 << ","
+		 << "Association Cost"
+		 << ","
+		 << "Recovery Applied"
+		 << ","
+		 << "Location estimated"
+		 << ","
+		 << "Real location"
+		 << ","
+		 << "Location Error"
+		 << ","
+		 << "Orientation Error"
+		 << endl;
 }
 
 // Three topics --> exact time policy callback
@@ -129,11 +207,11 @@ int main(int argc, char *argv[])
 	rclcpp::init(argc, argv);
 
 	// Node + NodeObjects declaration
-	auto results_node = std::make_shared<rclcpp::Node>("results_node");
+	auto location_statistics_node = std::make_shared<rclcpp::Node>("location_statistics_node");
 
-	message_filters::Subscriber<nav_msgs::msg::Odometry> string_sub(results_node, "/carla/ego_vehicle/odometry");
-	message_filters::Subscriber<detection_msgs::msg::DetectionArray> bool_sub(results_node, "/fake_pole_detection");
-	message_filters::Subscriber<tfm_landmark_based_localization_package::msg::Results> bool_sub2(results_node, "/results");
+	message_filters::Subscriber<nav_msgs::msg::Odometry> string_sub(location_statistics_node, "/carla/ego_vehicle/odometry");
+	message_filters::Subscriber<detection_msgs::msg::DetectionArray> bool_sub(location_statistics_node, "/fake_pole_detection");
+	message_filters::Subscriber<tfm_landmark_based_localization_package::msg::Results> bool_sub2(location_statistics_node, "/results");
 
 	// exact time policy
 	typedef message_filters::sync_policies::ExactTime<
@@ -146,7 +224,16 @@ int main(int argc, char *argv[])
 	// register the exact time callback
 	syncExact.registerCallback(sync_callback);
 
-	rclcpp::spin(results_node);
+	// Open statistics file
+	std::string file_name = "file_name.csv";
+	std::string package_share_directory = ament_index_cpp::get_package_share_directory("tfm_landmark_based_localization_package");
+	std::string statistics_directory = package_share_directory + "/../../../../src/tfm_landmark_based_localization_package/statistics/" + file_name;
+	file.open(statistics_directory);
+	print_header();
+
+	rclcpp::spin(location_statistics_node);
+
+	file.close();
 
 	rclcpp::shutdown();
 	return 0;

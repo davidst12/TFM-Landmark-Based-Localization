@@ -131,9 +131,14 @@ int main(int argc, char *argv[])
 	fake_pole_detection_node->declare_parameter("radius_detection", 0);
 	fake_pole_detection_node->declare_parameter("min_noise_error_sigma", 0.0);
 	fake_pole_detection_node->declare_parameter("max_noise_error_sigma", 0.0);
+	fake_pole_detection_node->declare_parameter("package_prefix", "");
+	fake_pole_detection_node->declare_parameter("landmarks_ground_truth_file", "");
+
 	fake_pole_detection_node->get_parameter("radius_detection", global_radius_detection);
 	fake_pole_detection_node->get_parameter("min_noise_error_sigma", global_min_noise_error_sigma);
 	fake_pole_detection_node->get_parameter("max_noise_error_sigma", global_max_noise_error_sigma);
+	auto package_prefix = fake_pole_detection_node->get_parameter("package_prefix").as_string();
+	auto landmarks_ground_truth_file = fake_pole_detection_node->get_parameter("landmarks_ground_truth_file").as_string();
 	cout << "Global parameters" << endl;
 	cout << " - Radius_detection -> " << global_radius_detection << endl;
 	cout << " - Noise_error_sigma_min -> " << global_min_noise_error_sigma << endl;
@@ -141,7 +146,7 @@ int main(int argc, char *argv[])
 		 << endl;
 
 	// Get GroundTruth Landmarks
-	landmark_poses = utils::get_landmark_poses();
+	landmark_poses = utils::get_landmark_poses(package_prefix, landmarks_ground_truth_file);
 
 	// Run every 0.1 second
 	rclcpp::WallRate rate(10);

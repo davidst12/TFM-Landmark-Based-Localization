@@ -43,25 +43,30 @@ using std::placeholders::_1;
 /* This example creates a subclass of Node and uses std::bind() to register a
  * member function as a callback from the timer. */
 
-class MainNode : public rclcpp::Node
+class LandmarksGraphLocationNode : public rclcpp::Node
 {
 public:
     // Constructor
-    MainNode() : Node("main_node", rclcpp::NodeOptions())
+    LandmarksGraphLocationNode() : Node("landmarks_graph_location_node", rclcpp::NodeOptions())
     {
         subscription_ = this->create_subscription<detection_msgs::msg::DetectionArray>(
-            "/fake_pole_detection", 1, std::bind(&MainNode::detectionsCallback, this, _1));
+            "/fake_pole_detection", 1, std::bind(&LandmarksGraphLocationNode::detectionsCallback, this, _1));
         subscription2_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
-            "/carla/ego_vehicle/gnss", 1, std::bind(&MainNode::gnss_callback, this, _1));
+            "/carla/ego_vehicle/gnss", 1, std::bind(&LandmarksGraphLocationNode::gnss_callback, this, _1));
         publisher = this->create_publisher<tfm_landmark_based_localization_package::msg::Results>("/results", 1);
-
-        landmark_poses = utils::get_landmark_poses();
 
         // Global parameters
         declare_parameter("use_landmark_assignment_algorithm", false);
         declare_parameter("gps_noise_error_sigma", 0.0);
+        declare_parameter("package_prefix", "");
+        declare_parameter("landmarks_ground_truth_file", "");
         global_use_landmark_assignment_algorithm = get_parameter("use_landmark_assignment_algorithm").as_bool();
         global_gps_noise_error_sigma = get_parameter("gps_noise_error_sigma").as_double();
+        auto package_prefix = get_parameter("package_prefix").as_string();
+        auto landmarks_ground_truth_file = get_parameter("landmarks_ground_truth_file").as_string();
+
+        landmark_poses = utils::get_landmark_poses(package_prefix, landmarks_ground_truth_file);
+
         cout << "Global parameters" << endl;
         cout << " - Use_landmark_assignment_algorithm -> " << global_use_landmark_assignment_algorithm << endl;
         cout << " - Gps_noise_error_sigma -> " << global_gps_noise_error_sigma << endl;
@@ -263,8 +268,6 @@ private:
         vehicle_pose_vertex->setEstimate(vehicle_pose);
         optimizer.addVertex(vehicle_pose_vertex);
 
-        // cout << "vehicle pose = " << vehicle_pose[0] << " , " << vehicle_pose[1] << endl;
-
         // Set detections (graph edges)
         for (size_t i = 0; i < detections.size(); i++)
         {
@@ -281,8 +284,6 @@ private:
                 landmark_observation->vertices()[1] = optimizer.vertex(stoi(detections[i].id));
             }
 
-            // Eigen::Vector2d measurement;
-            // Eigen::Matrix2d inf_matrix = Eigen::Matrix2d::Identity() * detections[i].covariance[0];
             Eigen::Matrix2d inf_matrix = utils::covariance_arrayX9_to_matrix2d(detections[i].covariance).inverse();
 
             landmark_observation->setMeasurement(g2o::Vector2(detections[i].position.x, detections[i].position.y));
@@ -306,13 +307,12 @@ private:
              << endl;
 
         vehicle_pose = vehicle_pose_estimated->estimate();
-        // cout << "Pose estimation check: " << vehicle_pose.toVector() << endl;
 
         results.time_spent.push_back(timeSpent);
         results.car_position_estimation.position = geometry_msgs::build<geometry_msgs::msg::Point>()
                                                        .x(vehicle_pose[0])
                                                        .y(vehicle_pose[1])
-                                                       .z(0.0);
+                                                       .z(vehicle_pose.rotation().angle());
         publisher->publish(results);
 
         cout << "-----------------" << endl
@@ -323,12 +323,11 @@ private:
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
-    auto main_node = std::make_shared<MainNode>();
+    auto main_node = std::make_shared<LandmarksGraphLocationNode>();
 
     main_node->wait_for_initial_pose();
     rclcpp::spin(main_node);
 
-    rclcpp::spin(std::make_shared<MainNode>());
     rclcpp::shutdown();
     return 0;
 }

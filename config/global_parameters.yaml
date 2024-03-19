@@ -3,7 +3,11 @@ fake_pole_detection_node:
   radius_detection: 35
   min_noise_error_sigma: 0.1
   max_noise_error_sigma: 0.6
-main_node:
+  package_prefix: "tfm_landmark_based_localization_package"
+  landmarks_ground_truth_file: "/../../src/tfm_landmark_based_localization_package/config/landmark_poses_town02.json"
+landmarks_graph_location_node:
  ros__parameters:
   use_landmark_assignment_algorithm: True
   gps_noise_error_sigma: 0.5
+  package_prefix: "tfm_landmark_based_localization_package"
+  landmarks_ground_truth_file: "/../../src/tfm_landmark_based_localization_package/config/landmark_poses_town02.json"
