@@ -44,6 +44,11 @@ def main():
 
     print(world.get_weather())  
 
+    actors = world.get_actors().filter("*traffic_light*")
+    for actor in actors:
+        actor.set_state(carla.TrafficLightState.Green)
+        actor.freeze(True)
+
 
 if __name__ == '__main__':
 

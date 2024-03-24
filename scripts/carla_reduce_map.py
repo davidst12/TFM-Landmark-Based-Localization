@@ -1,6 +1,7 @@
 import glob
 import os
 import sys
+import time
 
 # Description
 # - Reduce al mapa a carretera + acera + semaforos
@@ -85,6 +86,14 @@ def main():
         rotation = carla.Rotation(pitch = -90, yaw = -90, roll = 0)
     )
     spectator.set_transform(transform)
+
+    time.sleep(2)
+
+    # All trafic lights to green
+    actors = world.get_actors().filter("*traffic_light*")
+    for actor in actors:
+        actor.set_state(carla.TrafficLightState.Green)
+        actor.freeze(True)
 
 if __name__ == '__main__':
 

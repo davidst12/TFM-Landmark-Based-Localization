@@ -301,7 +301,8 @@ private:
         std::cout << vehicle_pose_estimated->estimate().translation().transpose() << " ) | "
                   << vehicle_pose_estimated->estimate().rotation().angle() << std::endl;
 
-        // End timer
+        // vehicle_pose_estimated->estimate().rotation().
+        //  End timer
         double timeSpent = utils::tic();
         cout << "-----> Time spent in Graph Localitation Algorithm: " << timeSpent << " micros" << endl
              << endl;

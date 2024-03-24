@@ -27,6 +27,9 @@ geometry_msgs::msg::Pose real_car_pose;
 detection_msgs::msg::DetectionArray detection_list;
 tfm_landmark_based_localization_package::msg::Results localitation_result;
 
+double linear_velocity = 0.0;
+double angular_velocity = 0.0;
+
 double current_error = 0.0;
 double maximum_error = 0.0;
 double average_error = 0.0;
@@ -59,6 +62,19 @@ void calculate_maximun_error()
 void calculate_average_error()
 {
 	average_error = average_error * iteration / (iteration + 1) + current_error / (iteration + 1);
+}
+
+std::string format_double_with_comma(double input)
+{
+	std::string aux = to_string(input);
+	for (unsigned int i = 0; i < aux.size(); i++)
+	{
+		if (aux[i] == '.')
+		{
+			aux[i] = ',';
+		}
+	}
+	return aux;
 }
 
 // Print statistics in console
@@ -95,6 +111,7 @@ void print_results()
 	cout << "Car estimated position:  ("
 		 << localitation_result.car_position_estimation.position.x << " , "
 		 << localitation_result.car_position_estimation.position.y << ")"
+		 << " ; Angle: " << localitation_result.car_position_estimation.position.z
 		 << endl;
 
 	cout << "Current Error: " << current_error << " cm" << endl;
@@ -122,30 +139,43 @@ void print_results_in_file()
 
 	std::string real_location = "(" + to_string(real_car_pose.position.x) + " | " + to_string(real_car_pose.position.y) + ")";
 
-	file << iteration
-		 << ","
-		 << localitation_result.detections_assignment.size()
-		 << ","
-		 << landmarks_detected
-		 << ","
-		 << real_landmarks
-		 << ","
-		 << localitation_result.time_spent[0]
-		 << ","
-		 << localitation_result.time_spent[1]
-		 << ","
-		 << localitation_result.cost
-		 << ","
-		 << localitation_result.recovery_applied
-		 << ","
-		 << location_estimated
-		 << ","
-		 << real_location
-		 << ","
-		 << current_error
-		 << ","
-		 << "0.0"
-		 << endl;
+	file
+		<< iteration
+		<< ";"
+		<< localitation_result.detections_assignment.size()
+		<< ";"
+		<< landmarks_detected
+		<< ";"
+		<< real_landmarks
+		<< ";"
+		<< format_double_with_comma(localitation_result.time_spent[0])
+		<< ";"
+		<< format_double_with_comma(localitation_result.time_spent[1])
+		<< ";"
+		<< format_double_with_comma(localitation_result.cost)
+		<< ";"
+		<< localitation_result.recovery_applied
+		<< ";"
+		<< format_double_with_comma(linear_velocity)
+		<< ";"
+		<< format_double_with_comma(angular_velocity)
+		<< ";"
+		<< format_double_with_comma(localitation_result.car_position_estimation.position.x)
+		<< ";"
+		<< format_double_with_comma(localitation_result.car_position_estimation.position.y)
+		<< ";"
+		<< format_double_with_comma(localitation_result.car_position_estimation.position.z)
+		<< ";"
+		<< format_double_with_comma(real_car_pose.position.x)
+		<< ";"
+		<< format_double_with_comma(real_car_pose.position.y)
+		<< ";"
+		<< "0,0"
+		<< ";"
+		<< format_double_with_comma(current_error)
+		<< ";"
+		<< "0,0"
+		<< endl;
 }
 
 void run_result_print_process()
@@ -160,27 +190,39 @@ void run_result_print_process()
 void print_header()
 {
 	file << "Iteration"
-		 << ","
-		 << "Nº Landmarks"
-		 << ","
+		 << ";"
+		 << "Nº Landmarks detected"
+		 << ";"
 		 << "Landmarks detected"
-		 << ","
+		 << ";"
 		 << "Real Landmarks"
-		 << ","
-		 << "Association time"
-		 << ","
-		 << "Localitation time"
-		 << ","
+		 << ";"
+		 << "Association time (micro sec)"
+		 << ";"
+		 << "Localitation time (micro sec)"
+		 << ";"
 		 << "Association Cost"
-		 << ","
+		 << ";"
 		 << "Recovery Applied"
-		 << ","
-		 << "Location estimated"
-		 << ","
-		 << "Real location"
-		 << ","
-		 << "Location Error"
-		 << ","
+		 << ";"
+		 << "Linear Velocity (m/s)"
+		 << ";"
+		 << "Angular Velocity (rad/s)"
+		 << ";"
+		 << "Location estimated X (m)"
+		 << ";"
+		 << "Location estimated Y (m)"
+		 << ";"
+		 << "Location estimated Angle (rad)"
+		 << ";"
+		 << "Real location X (m)"
+		 << ";"
+		 << "Real location Y (m)"
+		 << ";"
+		 << "Real location Angle (rad)"
+		 << ";"
+		 << "Location Error (cm)"
+		 << ";"
 		 << "Orientation Error"
 		 << endl;
 }
@@ -196,6 +238,8 @@ void sync_callback(
 	localitation_result = *result;
 
 	real_car_pose = odometry_message->pose.pose;
+	linear_velocity = odometry_message->twist.twist.linear.x;
+	angular_velocity = odometry_message->twist.twist.angular.z;
 
 	run_result_print_process();
 
