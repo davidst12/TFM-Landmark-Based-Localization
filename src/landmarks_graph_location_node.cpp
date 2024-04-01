@@ -57,10 +57,12 @@ public:
 
         // Global parameters
         declare_parameter("use_landmark_assignment_algorithm", false);
+        declare_parameter("use_manual_location_start", false);
         declare_parameter("gps_noise_error_sigma", 0.0);
         declare_parameter("package_prefix", "");
         declare_parameter("landmarks_ground_truth_file", "");
         global_use_landmark_assignment_algorithm = get_parameter("use_landmark_assignment_algorithm").as_bool();
+        global_use_manual_location_start = get_parameter("use_manual_location_start").as_bool();
         global_gps_noise_error_sigma = get_parameter("gps_noise_error_sigma").as_double();
         auto package_prefix = get_parameter("package_prefix").as_string();
         auto landmarks_ground_truth_file = get_parameter("landmarks_ground_truth_file").as_string();
@@ -69,9 +71,19 @@ public:
 
         cout << "Global parameters" << endl;
         cout << " - Use_landmark_assignment_algorithm -> " << global_use_landmark_assignment_algorithm << endl;
+        cout << " - Use_landmark_assignment_algorithm -> " << global_use_manual_location_start << endl;
         cout << " - Gps_noise_error_sigma -> " << global_gps_noise_error_sigma << endl;
 
         recovery_counter = 0;
+
+        if (global_use_manual_location_start)
+        {
+            wait_for_initial_pose();
+        }
+        else
+        {
+            recovery_counter = 3;
+        }
     }
 
     // Wait for initial pose from user
@@ -97,6 +109,7 @@ private:
     g2o::SE2 vehicle_pose;
     g2o::SE2 gnss_vehicle_pose;
     bool global_use_landmark_assignment_algorithm;
+    bool global_use_manual_location_start;
     double global_gps_noise_error_sigma;
 
     tfm_landmark_based_localization_package::msg::Results results;
@@ -147,9 +160,10 @@ private:
     // Distance: car -> landmark_detected
     double calculate_distance(Eigen::Vector2d landmarkPose, g2o::SE2 poseCar, detection_msgs::msg::Detection measure)
     {
-
-        double l1 = pow(landmarkPose[0] - (poseCar[0] + measure.position.x), 2);
-        double l2 = pow(landmarkPose[1] - (poseCar[1] + measure.position.y), 2);
+        double x_t = cos(poseCar[2]) * measure.position.x - sin(poseCar[2]) * measure.position.y;
+        double y_t = sin(poseCar[2]) * measure.position.x + cos(poseCar[2]) * measure.position.y;
+        double l1 = pow(landmarkPose[0] - (poseCar[0] + x_t), 2);
+        double l2 = pow(landmarkPose[1] - (poseCar[1] + y_t), 2);
 
         return sqrt(l1 + l2);
     }
@@ -232,6 +246,13 @@ private:
         if (global_use_landmark_assignment_algorithm)
         {
             landmarkAssignment = assignment_landmark_algorithm();
+        }
+        else
+        {
+            vector<int> vect{-1};
+            results.detections_assignment = vect;
+            results.cost = -1.0;
+            results.time_spent.push_back(-1.0);
         }
 
         cout << endl
@@ -326,7 +347,7 @@ int main(int argc, char *argv[])
     rclcpp::init(argc, argv);
     auto main_node = std::make_shared<LandmarksGraphLocationNode>();
 
-    main_node->wait_for_initial_pose();
+    // main_node->wait_for_initial_pose();
     rclcpp::spin(main_node);
 
     rclcpp::shutdown();

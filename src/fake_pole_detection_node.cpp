@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include "detection_msgs/msg/detection.hpp"
 #include "detection_msgs/msg/detection_array.hpp"
@@ -41,8 +42,10 @@ void message_callback(const nav_msgs::msg::Odometry::SharedPtr odometryMessage)
 {
 	double poseX = odometryMessage->pose.pose.position.x;
 	double poseY = odometryMessage->pose.pose.position.y;
+	double angle = utils::yaw_from_quaternion<double>(odometryMessage->pose.pose.orientation);
+	std::cout << "Angle in radians: " << angle << endl;
 
-	vehicle_pose = g2o::SE2(poseX, poseY, 0.0);
+	vehicle_pose = g2o::SE2(poseX, poseY, angle);
 
 	detections_array = detection_msgs::msg::DetectionArray();
 	detections_array.header = odometryMessage->header;

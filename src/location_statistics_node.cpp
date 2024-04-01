@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include "utils/utils.cpp"
 
 #include "std_msgs/msg/string.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -29,10 +30,12 @@ tfm_landmark_based_localization_package::msg::Results localitation_result;
 
 double linear_velocity = 0.0;
 double angular_velocity = 0.0;
+double real_orientation = 0.0;
 
 double current_error = 0.0;
 double maximum_error = 0.0;
 double average_error = 0.0;
+double orientation_error = 5.0;
 
 int iteration = 0;
 int recoveries_count = 0;
@@ -62,6 +65,10 @@ void calculate_maximun_error()
 void calculate_average_error()
 {
 	average_error = average_error * iteration / (iteration + 1) + current_error / (iteration + 1);
+}
+void calculate_orientation_error_in_rad()
+{
+	orientation_error = abs(real_orientation) - abs(localitation_result.car_position_estimation.position.z);
 }
 
 std::string format_double_with_comma(double input)
@@ -107,7 +114,9 @@ void print_results()
 
 	cout << "Car real position:       ("
 		 << real_car_pose.position.x << " , "
-		 << real_car_pose.position.y << ")" << endl;
+		 << real_car_pose.position.y << ")"
+		 << " ; Angle: " << real_orientation
+		 << endl;
 	cout << "Car estimated position:  ("
 		 << localitation_result.car_position_estimation.position.x << " , "
 		 << localitation_result.car_position_estimation.position.y << ")"
@@ -117,6 +126,7 @@ void print_results()
 	cout << "Current Error: " << current_error << " cm" << endl;
 	cout << "Maximum Error: " << maximum_error << " cm" << endl;
 	cout << "Average Error: " << average_error << " cm" << endl;
+	cout << "Orientation Error: " << orientation_error << " rad" << endl;
 	cout << "Recovery Applied counter: " << recoveries_count << endl;
 	cout << endl;
 }
@@ -134,10 +144,6 @@ void print_results_in_file()
 	{
 		real_landmarks += "-" + detection_list.detections[i].id;
 	}
-
-	std::string location_estimated = "(" + to_string(localitation_result.car_position_estimation.position.x) + " | " + to_string(localitation_result.car_position_estimation.position.y) + ")";
-
-	std::string real_location = "(" + to_string(real_car_pose.position.x) + " | " + to_string(real_car_pose.position.y) + ")";
 
 	file
 		<< iteration
@@ -170,11 +176,11 @@ void print_results_in_file()
 		<< ";"
 		<< format_double_with_comma(real_car_pose.position.y)
 		<< ";"
-		<< "0,0"
+		<< format_double_with_comma(real_orientation)
 		<< ";"
 		<< format_double_with_comma(current_error)
 		<< ";"
-		<< "0,0"
+		<< format_double_with_comma(orientation_error)
 		<< endl;
 }
 
@@ -183,6 +189,7 @@ void run_result_print_process()
 	calculate_error_in_cm();
 	calculate_maximun_error();
 	calculate_average_error();
+	calculate_orientation_error_in_rad();
 	print_results();
 	print_results_in_file();
 }
@@ -223,7 +230,7 @@ void print_header()
 		 << ";"
 		 << "Location Error (cm)"
 		 << ";"
-		 << "Orientation Error"
+		 << "Orientation Error (rad)"
 		 << endl;
 }
 
@@ -240,10 +247,25 @@ void sync_callback(
 	real_car_pose = odometry_message->pose.pose;
 	linear_velocity = odometry_message->twist.twist.linear.x;
 	angular_velocity = odometry_message->twist.twist.angular.z;
+	real_orientation = utils::yaw_from_quaternion<double>(real_car_pose.orientation);
 
 	run_result_print_process();
 
 	iteration++;
+}
+
+std::string generate_file_name()
+{
+	time_t now = time(0);
+	struct tm tstruct;
+	char buf[80];
+	tstruct = *localtime(&now);
+
+	strftime(buf, sizeof(buf), "test-%Y-%m-%d--", &tstruct);
+
+	std::string f = buf + std::to_string(tstruct.tm_hour) + "-" + std::to_string(tstruct.tm_min) + "-" + std::to_string(tstruct.tm_sec) + ".csv";
+
+	return f;
 }
 
 int main(int argc, char *argv[])
@@ -269,7 +291,7 @@ int main(int argc, char *argv[])
 	syncExact.registerCallback(sync_callback);
 
 	// Open statistics file
-	std::string file_name = "file_name.csv";
+	std::string file_name = generate_file_name();
 	std::string package_share_directory = ament_index_cpp::get_package_share_directory("tfm_landmark_based_localization_package");
 	std::string statistics_directory = package_share_directory + "/../../../../src/tfm_landmark_based_localization_package/statistics/" + file_name;
 	file.open(statistics_directory);
