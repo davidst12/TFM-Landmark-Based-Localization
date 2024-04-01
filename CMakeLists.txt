@@ -17,6 +17,8 @@ find_package(carla_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(detection_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+
 
 # Dependences for own messages
 find_package(rosidl_default_generators REQUIRED)
@@ -51,7 +53,7 @@ add_library(my_commons SHARED
   src/utils/errors.cpp
 )
 
-ament_target_dependencies(my_commons rclcpp std_msgs geometry_msgs)
+ament_target_dependencies(my_commons rclcpp std_msgs geometry_msgs tf2_geometry_msgs)
 target_link_libraries(my_commons Eigen3::Eigen nlohmann_json)
 
 ### Declare executables
@@ -66,13 +68,13 @@ target_link_libraries(landmarks_graph_location_node my_commons nlohmann_json "${
 
 # fake_pole_detection_node declaration
 add_executable(fake_pole_detection_node src/fake_pole_detection_node.cpp)
-ament_target_dependencies(fake_pole_detection_node rclcpp std_msgs nav_msgs detection_msgs)
+ament_target_dependencies(fake_pole_detection_node rclcpp std_msgs nav_msgs detection_msgs tf2_geometry_msgs)
 target_link_libraries(fake_pole_detection_node g2o::core g2o::types_sba Eigen3::Eigen nlohmann_json)
 
 # location_statistics_node declaration
 add_executable(location_statistics_node src/location_statistics_node.cpp)
 ament_target_dependencies(location_statistics_node rclcpp std_msgs nav_msgs detection_msgs message_filters)
-target_link_libraries(location_statistics_node "${cpp_typesupport_target}")
+target_link_libraries(location_statistics_node my_commons "${cpp_typesupport_target}")
 
 ### g2o examples declaration
 add_executable(g2o_ba_demo

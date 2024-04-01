@@ -12,6 +12,9 @@
 #include <geometry_msgs/msg/pose.hpp>
 #include <nlohmann/json.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
+#include <cmath>
+#include <geometry_msgs/msg/quaternion.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 using json = nlohmann::json;
 
@@ -109,6 +112,37 @@ namespace utils
         return {covariance_matrix(0, 0), covariance_matrix(0, 1), 0,
                 covariance_matrix(1, 0), covariance_matrix(1, 1), 0,
                 0, 0, 0};
+    }
+
+    // Converts degrees to radians in compile time
+    template <typename T>
+    constexpr double deg_to_rad(const T &deg) { return (M_PI * deg / 180.0); }
+
+    template <typename T>
+    geometry_msgs::msg::Quaternion quaternion_msg_from_yaw(T yaw)
+    {
+        geometry_msgs::msg::Quaternion q;
+        tf2::Quaternion tf_q;
+
+        tf_q.setRPY(0.0, 0.0, yaw);
+
+        q.x = tf_q.x();
+        q.y = tf_q.y();
+        q.z = tf_q.z();
+        q.w = tf_q.w();
+
+        return q;
+    }
+
+    // Extracts yaw angle from quaternion msg. Range [-pi - pi]
+    template <typename T>
+    T yaw_from_quaternion(const geometry_msgs::msg::Quaternion &q)
+    {
+        tf2::Quaternion tf_q(q.x, q.y, q.z, q.w);
+        tf2::Matrix3x3 m(tf_q);
+        double roll, pitch, yaw;
+        m.getRPY(roll, pitch, yaw);
+        return yaw;
     }
 
 }

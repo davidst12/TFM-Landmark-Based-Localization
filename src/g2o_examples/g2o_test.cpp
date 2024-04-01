@@ -113,11 +113,11 @@ double gaussian(double sigma)
 std::vector<Eigen::Vector2d> generate_landmark_points()
 {
     std::vector<Eigen::Vector2d> poses{
-        Eigen::Vector2d{5.0, 40.0},
-        Eigen::Vector2d{-40.0, 50.0},
-        Eigen::Vector2d{55.0, 25.0},
-        Eigen::Vector2d{-65.0, 55.0},
-        Eigen::Vector2d{85.0, 60.0}};
+        Eigen::Vector2d{1.0, 5.0},
+        Eigen::Vector2d{5.0, 6.0},
+        Eigen::Vector2d{7.0, 2.0},
+        Eigen::Vector2d{5.0, 1.0},
+        Eigen::Vector2d{1.0, 2.0}};
 
     return poses;
 }
@@ -128,9 +128,27 @@ void compute_landmark_measurement(const g2o::SE2 &pose, const Eigen::Vector2d &l
     // Compute the perfect measurement
     Eigen::Vector2d true_measurement = pose.inverse() * landmark;
     // Add gaussian noise
-    measurement = true_measurement + Eigen::Vector2d{gaussian(0.1), gaussian(0.1)};
+    measurement = true_measurement; //+ Eigen::Vector2d{gaussian(0.1), gaussian(0.1)};
     // Fill the information matrix
     inf_matrix = Eigen::Matrix2d::Identity() * 10;
+
+    std::cout << "Measure : " << measurement[0] << " , " << measurement[1] << std::endl;
+}
+
+std::string generate_file_name()
+{
+    time_t now = time(0);
+    struct tm tstruct;
+    char buf[80];
+    tstruct = *localtime(&now);
+
+    std::cout << "Dte2 : " << tstruct.tm_wday << std::endl;
+
+    strftime(buf, sizeof(buf), "%Y-%m-%d--", &tstruct);
+
+    std::string f = buf + std::to_string(tstruct.tm_hour) + "-" + std::to_string(tstruct.tm_min) + "-" + std::to_string(tstruct.tm_sec);
+
+    return f;
 }
 
 int main()
@@ -143,8 +161,8 @@ int main()
         std::cout << "* " << p.transpose() << std::endl;
     }
 
-    g2o::SE2 vehicle_pose_gt(10.0, 11.0, g2o_test::deg_to_rad<double>(0.0));
-    g2o::SE2 vehicle_pose_initial_guess(7.7, 6.0, g2o_test::deg_to_rad<double>(15.0));
+    g2o::SE2 vehicle_pose_gt(5.0, 5.0, g2o_test::deg_to_rad<double>(90.0));
+    g2o::SE2 vehicle_pose_initial_guess(6.7, 15.2, g2o_test::deg_to_rad<double>(18.0));
     std::cout << "Vehicle pose (ground truth):" << std::endl;
     std::cout << vehicle_pose_gt.translation().transpose() << " | " << vehicle_pose_gt.rotation().angle() << std::endl;
     std::cout << "Vehicle pose (initial guess):" << std::endl;
@@ -205,6 +223,8 @@ int main()
     std::cout << "Vehicle pose (estimated):" << std::endl;
     std::cout << vehicle_pose->estimate().translation().transpose() << " | "
               << vehicle_pose->estimate().rotation().angle() << std::endl;
+
+    std::cout << "Date " << generate_file_name() << std::endl;
 
     return 0;
 }
