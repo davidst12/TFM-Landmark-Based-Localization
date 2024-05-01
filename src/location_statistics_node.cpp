@@ -68,7 +68,7 @@ void calculate_average_error()
 }
 void calculate_orientation_error_in_rad()
 {
-	orientation_error = abs(real_orientation) - abs(localitation_result.car_position_estimation.position.z);
+	orientation_error = abs(abs(real_orientation) - abs(localitation_result.car_position_estimation.position.z));
 }
 
 std::string format_double_with_comma(double input)
@@ -145,6 +145,8 @@ void print_results_in_file()
 		real_landmarks += "-" + detection_list.detections[i].id;
 	}
 
+	string landmarks_detection_match = (landmarks_detected == real_landmarks || landmarks_detected == "-1") ? "YES" : "NO";
+
 	file
 		<< iteration
 		<< ";"
@@ -153,6 +155,8 @@ void print_results_in_file()
 		<< landmarks_detected
 		<< ";"
 		<< real_landmarks
+		<< ";"
+		<< landmarks_detection_match
 		<< ";"
 		<< format_double_with_comma(localitation_result.time_spent[0])
 		<< ";"
@@ -203,6 +207,8 @@ void print_header()
 		 << "Landmarks detected"
 		 << ";"
 		 << "Real Landmarks"
+		 << ";"
+		 << "Landmarks detections match"
 		 << ";"
 		 << "Association time (micro sec)"
 		 << ";"
