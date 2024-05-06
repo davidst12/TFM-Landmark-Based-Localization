@@ -7,7 +7,7 @@ fake_pole_detection_node:
   landmarks_ground_truth_file: "/../../src/tfm_landmark_based_localization_package/config/landmark_poses_town02.json"
 landmarks_graph_location_node:
  ros__parameters:
-  use_landmark_assignment_algorithm: True
+  use_landmark_assignment_algorithm: False
   use_manual_location_start: False
   gps_noise_error_sigma: 0.5
   package_prefix: "tfm_landmark_based_localization_package"

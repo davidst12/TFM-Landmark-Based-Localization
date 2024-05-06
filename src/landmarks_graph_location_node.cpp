@@ -49,10 +49,10 @@ public:
     // Constructor
     LandmarksGraphLocationNode() : Node("landmarks_graph_location_node", rclcpp::NodeOptions())
     {
-        subscription_ = this->create_subscription<detection_msgs::msg::DetectionArray>(
-            "/fake_pole_detection", 1, std::bind(&LandmarksGraphLocationNode::detectionsCallback, this, _1));
         subscription2_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
             "/carla/ego_vehicle/gnss", 1, std::bind(&LandmarksGraphLocationNode::gnss_callback, this, _1));
+        subscription_ = this->create_subscription<detection_msgs::msg::DetectionArray>(
+            "/fake_pole_detection", 1, std::bind(&LandmarksGraphLocationNode::detectionsCallback, this, _1));
         publisher = this->create_publisher<tfm_landmark_based_localization_package::msg::Results>("/results", 1);
 
         // Global parameters
@@ -78,11 +78,12 @@ public:
 
         if (global_use_manual_location_start)
         {
+            first_iteration = false;
             wait_for_initial_pose();
         }
         else
         {
-            recovery_counter = 3;
+            first_iteration = true;
         }
     }
 
@@ -99,8 +100,8 @@ public:
     }
 
 private:
-    rclcpp::Subscription<detection_msgs::msg::DetectionArray>::SharedPtr subscription_;
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr subscription2_;
+    rclcpp::Subscription<detection_msgs::msg::DetectionArray>::SharedPtr subscription_;
     rclcpp::Publisher<tfm_landmark_based_localization_package::msg::Results>::SharedPtr publisher;
 
     std::vector<utils::LandmarkObject> landmark_poses;
@@ -114,6 +115,7 @@ private:
 
     tfm_landmark_based_localization_package::msg::Results results;
     int recovery_counter;
+    bool first_iteration;
 
     void cleanResults()
     {
@@ -138,6 +140,11 @@ private:
 
         results.header = detections_list.header;
 
+        if (first_iteration && gnss_vehicle_pose.translation().x() == 0 && gnss_vehicle_pose.translation().y() == 0)
+        {
+            return;
+        }
+
         estimate_localitation();
     }
 
@@ -145,7 +152,7 @@ private:
     void gnss_callback(const sensor_msgs::msg::NavSatFix &gnssValue)
     {
 
-        if (recovery_counter > 1)
+        if (recovery_counter > 1 || first_iteration)
         {
             double lat = gnssValue.latitude;
             double lon = gnssValue.longitude;
@@ -229,23 +236,107 @@ private:
         return finalAssignment;
     }
 
-    // Location based in graph algorithm
-    void estimate_localitation()
+    vector<int> deep_assignment_landmark_algorithm()
     {
 
-        // If recovery is true -> vehicle_pose lo cojo del GNSS
-        results.recovery_applied = false;
-        if (recovery_counter == 3)
+        cout << "-----------------" << endl
+             << endl;
+        cout << "Landmark - Measure association algorithm (Hungarian Method) -- recovery variant" << endl;
+
+        // Start timer
+        utils::tic();
+
+        vector<double> vect{0.0, 1.047, 2.094, 3.14, 4.18, 5.235};
+        vector<int> cost_vector;
+        vector<vector<int>> landmarks_vector;
+
+        for (unsigned int i = 0; i < vect.size(); i++)
         {
-            recovery_counter = 0;
-            vehicle_pose = gnss_vehicle_pose;
-            results.recovery_applied = true;
+            vehicle_pose = g2o::SE2(vehicle_pose.translation().x(), vehicle_pose.translation().y(), vect[i]);
+
+            // Fill Cost Matrix
+            vector<vector<double>> costMatrix(landmark_poses.size(), vector<double>(detections.size(), 0.0));
+
+            for (unsigned int i = 0; i < landmark_poses.size(); i++)
+            {
+                for (unsigned int j = 0; j < detections.size(); j++)
+                {
+                    double a = calculate_distance(landmark_poses[i].get_pose(), vehicle_pose, detections[j]);
+                    costMatrix[i][j] = a;
+                }
+            }
+
+            // Run algorithm
+            HungarianAlgorithm HungAlgo;
+            vector<int> assignment;
+            vector<int> finalAssignment;
+
+            double cost = HungAlgo.Solve(costMatrix, assignment);
+
+            // Associate landmark - measure
+            for (unsigned int landmarkEntry = 0; landmarkEntry < costMatrix.size(); landmarkEntry++)
+            {
+                int measureEntry = assignment[landmarkEntry];
+                if (measureEntry != -1)
+                {
+                    finalAssignment.push_back(landmarkEntry);
+                    std::cout << " - Landmark [" << landmarkEntry << "] -> Measure " << measureEntry << endl;
+                }
+            }
+            cost_vector.push_back(cost);
+            landmarks_vector.push_back(finalAssignment);
+            std::cout
+                << " - Cost: " << cost << std::endl;
         }
 
-        vector<int> landmarkAssignment;
+        int min_cost = 999;
+        int min_iteration = 999;
+        for (unsigned int i = 0; i < cost_vector.size(); i++)
+        {
+            if (cost_vector[i] < min_cost)
+            {
+                min_cost = cost_vector[i];
+                min_iteration = i;
+            }
+            std::cout << "Cost[" << i << "] = " << cost_vector[i] << endl;
+        }
+
+        if (min_cost > 50)
+        {
+            recovery_counter++;
+        }
+        else
+        {
+            recovery_counter = 0;
+        }
+
+        // End timer
+        double timeSpent = utils::tic();
+        cout << "-----> Time spent in Deep Association Algorithm: " << timeSpent << " micros" << endl;
+
+        results.detections_assignment = landmarks_vector[min_iteration];
+        results.cost = min_cost;
+        results.time_spent.push_back(timeSpent);
+
+        return landmarks_vector[min_iteration];
+    }
+
+    vector<int> assignment_algorithm_selector()
+    {
+
+        vector<int> assignment_vector;
         if (global_use_landmark_assignment_algorithm)
         {
-            landmarkAssignment = assignment_landmark_algorithm();
+
+            if (results.recovery_applied || first_iteration)
+            {
+                assignment_vector = deep_assignment_landmark_algorithm();
+                first_iteration = false;
+            }
+            else
+            {
+                assignment_vector = assignment_landmark_algorithm();
+            }
         }
         else
         {
@@ -254,6 +345,26 @@ private:
             results.cost = -1.0;
             results.time_spent.push_back(-1.0);
         }
+
+        return assignment_vector;
+    }
+
+    // Location based in graph algorithm
+    void estimate_localitation()
+    {
+
+        // If recovery is true -> vehicle_pose lo cojo del GNSS
+        results.recovery_applied = false;
+        if (recovery_counter == 3 || first_iteration)
+        {
+            recovery_counter = 0;
+            vehicle_pose = gnss_vehicle_pose;
+            results.recovery_applied = !first_iteration;
+            std::cout << "GPS position: " << vehicle_pose.translation().x() << " , " << vehicle_pose.translation().y() << endl;
+        }
+
+        vector<int> landmarkAssignment;
+        landmarkAssignment = assignment_algorithm_selector();
 
         cout << endl
              << "Graph Localitation Algorithm" << endl;

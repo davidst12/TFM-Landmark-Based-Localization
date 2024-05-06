@@ -36,6 +36,7 @@ double current_error = 0.0;
 double maximum_error = 0.0;
 double average_error = 0.0;
 double orientation_error = 5.0;
+double average_detection_error = 0.0;
 
 int iteration = 0;
 int recoveries_count = 0;
@@ -68,7 +69,16 @@ void calculate_average_error()
 }
 void calculate_orientation_error_in_rad()
 {
-	orientation_error = abs(real_orientation) - abs(localitation_result.car_position_estimation.position.z);
+	orientation_error = abs(abs(real_orientation) - abs(localitation_result.car_position_estimation.position.z));
+}
+void average_measurement_error()
+{
+	double detection_error_sum = 0.0;
+	for (unsigned int i = 0; i < detection_list.detections.size(); i++)
+	{
+		detection_error_sum += sqrt(pow(detection_list.detections[i].covariance[0], 2) + pow(detection_list.detections[i].covariance[4], 2));
+	}
+	average_detection_error = detection_error_sum / detection_list.detections.size();
 }
 
 std::string format_double_with_comma(double input)
@@ -145,14 +155,20 @@ void print_results_in_file()
 		real_landmarks += "-" + detection_list.detections[i].id;
 	}
 
+	string landmarks_detection_match = (landmarks_detected == real_landmarks || landmarks_detected == "-1") ? "YES" : "NO";
+
 	file
 		<< iteration
 		<< ";"
-		<< localitation_result.detections_assignment.size()
+		<< detection_list.detections.size()
 		<< ";"
 		<< landmarks_detected
 		<< ";"
 		<< real_landmarks
+		<< ";"
+		<< landmarks_detection_match
+		<< ";"
+		<< format_double_with_comma(average_detection_error)
 		<< ";"
 		<< format_double_with_comma(localitation_result.time_spent[0])
 		<< ";"
@@ -190,6 +206,7 @@ void run_result_print_process()
 	calculate_maximun_error();
 	calculate_average_error();
 	calculate_orientation_error_in_rad();
+	average_measurement_error();
 	print_results();
 	print_results_in_file();
 }
@@ -203,6 +220,10 @@ void print_header()
 		 << "Landmarks detected"
 		 << ";"
 		 << "Real Landmarks"
+		 << ";"
+		 << "Landmarks detections match"
+		 << ";"
+		 << "Average measurement error"
 		 << ";"
 		 << "Association time (micro sec)"
 		 << ";"
