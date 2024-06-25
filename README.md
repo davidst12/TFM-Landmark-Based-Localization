@@ -16,9 +16,15 @@
 ```
 
 ### Ros diagram
-![tfm_diagram_nodes_topics_1 drawio](https://github.com/davidst12/TFM-Landmark-Based-Localization/assets/118628096/0604499f-51a3-4719-b0f3-e05dbda50617)
-
+![secuencia_2](https://github.com/davidst12/TFM-Landmark-Based-Localization/assets/118628096/f4298b41-e659-495d-8633-eefde5de4c7b)
 
 ### Sequence diagram
+![node_graph](https://github.com/davidst12/TFM-Landmark-Based-Localization/assets/118628096/1af52464-bd71-4728-8c0b-1f3d1f627b57)
 
-![tfm_diagram_sequence_1 drawio (1)](https://github.com/davidst12/TFM-Landmark-Based-Localization/assets/118628096/8bd07667-1a63-455a-8e22-c98725353c24)
+### Dependences
+
+https://github.com/Butakus/detection_msgs
+
+https://github.com/carla-simulator/ros-bridge
+
+https://wiki.ros.org/g2o
