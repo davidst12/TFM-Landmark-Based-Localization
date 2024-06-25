@@ -23,8 +23,9 @@
 
 ### Dependencies
 
+Add this ROS 2 packages to same workspace as this package
 https://github.com/Butakus/detection_msgs
-
 https://github.com/carla-simulator/ros-bridge
 
+Add this ROS 2 packages to ROS2 worksapce
 https://wiki.ros.org/g2o
