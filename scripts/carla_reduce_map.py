@@ -85,7 +85,7 @@ def main():
         location = carla.Location(x=104, z=235.0, y = 205), 
         rotation = carla.Rotation(pitch = -90, yaw = -90, roll = 0)
     )
-    spectator.set_transform(transform)
+    #spectator.set_transform(transform)
 
     time.sleep(2)
 

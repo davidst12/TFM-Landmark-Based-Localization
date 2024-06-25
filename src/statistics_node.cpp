@@ -294,11 +294,11 @@ int main(int argc, char *argv[])
 	rclcpp::init(argc, argv);
 
 	// Node + NodeObjects declaration
-	auto location_statistics_node = std::make_shared<rclcpp::Node>("location_statistics_node");
+	auto statistics_node = std::make_shared<rclcpp::Node>("statistics_node");
 
-	message_filters::Subscriber<nav_msgs::msg::Odometry> string_sub(location_statistics_node, "/carla/ego_vehicle/odometry");
-	message_filters::Subscriber<detection_msgs::msg::DetectionArray> bool_sub(location_statistics_node, "/fake_pole_detection");
-	message_filters::Subscriber<tfm_landmark_based_localization_package::msg::Results> bool_sub2(location_statistics_node, "/results");
+	message_filters::Subscriber<nav_msgs::msg::Odometry> string_sub(statistics_node, "/carla/ego_vehicle/odometry");
+	message_filters::Subscriber<detection_msgs::msg::DetectionArray> bool_sub(statistics_node, "/fake_pole_detection");
+	message_filters::Subscriber<tfm_landmark_based_localization_package::msg::Results> bool_sub2(statistics_node, "/results");
 
 	// exact time policy
 	typedef message_filters::sync_policies::ExactTime<
@@ -318,7 +318,7 @@ int main(int argc, char *argv[])
 	file.open(statistics_directory);
 	print_header();
 
-	rclcpp::spin(location_statistics_node);
+	rclcpp::spin(statistics_node);
 
 	file.close();
 

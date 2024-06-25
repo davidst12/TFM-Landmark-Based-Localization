@@ -1,14 +1,14 @@
 fake_pole_detection_node:
  ros__parameters:
-  radius_detection: 35
+  radius_detection: 25
   min_noise_error_sigma: 0.0
-  max_noise_error_sigma: 0.4
+  max_noise_error_sigma: 0.2
   package_prefix: "tfm_landmark_based_localization_package"
-  landmarks_ground_truth_file: "/../../src/tfm_landmark_based_localization_package/config/landmark_poses_town02.json"
-landmarks_graph_location_node:
+  landmarks_ground_truth_file: "/../../src/tfm_landmark_based_localization_package/config/landmark_pole_poses_town02.json"
+localitation_node:
  ros__parameters:
-  use_landmark_assignment_algorithm: False
+  use_landmark_assignment_algorithm: True
   use_manual_location_start: False
-  gps_noise_error_sigma: 0.5
+  gps_noise_error_sigma: 0.4
   package_prefix: "tfm_landmark_based_localization_package"
-  landmarks_ground_truth_file: "/../../src/tfm_landmark_based_localization_package/config/landmark_poses_town02.json"
+  landmarks_ground_truth_file: "/../../src/tfm_landmark_based_localization_package/config/landmark_pole_poses_town02.json"

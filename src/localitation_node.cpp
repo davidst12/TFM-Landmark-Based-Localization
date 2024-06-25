@@ -43,16 +43,16 @@ using std::placeholders::_1;
 /* This example creates a subclass of Node and uses std::bind() to register a
  * member function as a callback from the timer. */
 
-class LandmarksGraphLocationNode : public rclcpp::Node
+class LocalitationNode : public rclcpp::Node
 {
 public:
     // Constructor
-    LandmarksGraphLocationNode() : Node("landmarks_graph_location_node", rclcpp::NodeOptions())
+    LocalitationNode() : Node("localitation_node", rclcpp::NodeOptions())
     {
         subscription2_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
-            "/carla/ego_vehicle/gnss", 1, std::bind(&LandmarksGraphLocationNode::gnss_callback, this, _1));
+            "/carla/ego_vehicle/gnss", 1, std::bind(&LocalitationNode::gnss_callback, this, _1));
         subscription_ = this->create_subscription<detection_msgs::msg::DetectionArray>(
-            "/fake_pole_detection", 1, std::bind(&LandmarksGraphLocationNode::detectionsCallback, this, _1));
+            "/fake_pole_detection", 1, std::bind(&LocalitationNode::detectionsCallback, this, _1));
         publisher = this->create_publisher<tfm_landmark_based_localization_package::msg::Results>("/results", 1);
 
         // Global parameters
@@ -140,6 +140,7 @@ private:
 
         results.header = detections_list.header;
 
+        // Start estimating location only if first gnss positio is received for initial pose
         if (first_iteration && gnss_vehicle_pose.translation().x() == 0 && gnss_vehicle_pose.translation().y() == 0)
         {
             return;
@@ -173,6 +174,16 @@ private:
         double l2 = pow(landmarkPose[1] - (poseCar[1] + y_t), 2);
 
         return sqrt(l1 + l2);
+    }
+
+    void update_initial_pose(g2o::SE2 new_vehicle_pose)
+    {
+        vehicle_pose = new_vehicle_pose;
+    }
+
+    void use_gnss_pose()
+    {
+        vehicle_pose = gnss_vehicle_pose;
     }
 
     // Association Algorithm
@@ -358,7 +369,7 @@ private:
         if (recovery_counter == 3 || first_iteration)
         {
             recovery_counter = 0;
-            vehicle_pose = gnss_vehicle_pose;
+            use_gnss_pose();
             results.recovery_applied = !first_iteration;
             std::cout << "GPS position: " << vehicle_pose.translation().x() << " , " << vehicle_pose.translation().y() << endl;
         }
@@ -439,7 +450,7 @@ private:
         cout << "-----> Time spent in Graph Localitation Algorithm: " << timeSpent << " micros" << endl
              << endl;
 
-        vehicle_pose = vehicle_pose_estimated->estimate();
+        update_initial_pose(vehicle_pose_estimated->estimate());
 
         results.time_spent.push_back(timeSpent);
         results.car_position_estimation.position = geometry_msgs::build<geometry_msgs::msg::Point>()
@@ -456,7 +467,7 @@ private:
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv);
-    auto main_node = std::make_shared<LandmarksGraphLocationNode>();
+    auto main_node = std::make_shared<LocalitationNode>();
 
     // main_node->wait_for_initial_pose();
     rclcpp::spin(main_node);

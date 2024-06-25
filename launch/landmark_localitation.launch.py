@@ -17,8 +17,8 @@ def generate_launch_description():
 ),
         Node(
             package='tfm_landmark_based_localization_package',
-            executable='landmarks_graph_location_node',
-            name='landmarks_graph_location_node',
+            executable='localitation_node',
+            name='localitation_node',
             parameters=[os.path.join(
                 get_package_prefix('tfm_landmark_based_localization_package'), '../../src/tfm_landmark_based_localization_package',
                 'config', 'global_parameters.yaml'
@@ -28,8 +28,8 @@ def generate_launch_description():
         ),
         Node(
             package='tfm_landmark_based_localization_package',
-            executable='location_statistics_node',
-            name='location_statistics_node',
+            executable='statistics_node',
+            name='statistics_node',
             output='screen',
             prefix=["gnome-terminal --title='Location Statistics Node' -- "]
         ),
