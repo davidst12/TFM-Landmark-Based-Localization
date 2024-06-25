@@ -21,7 +21,7 @@
 ### Sequence diagram
 ![node_graph](https://github.com/davidst12/TFM-Landmark-Based-Localization/assets/118628096/1af52464-bd71-4728-8c0b-1f3d1f627b57)
 
-### Dependences
+### Dependencies
 
 https://github.com/Butakus/detection_msgs
 
